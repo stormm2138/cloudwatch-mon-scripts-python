@@ -30,6 +30,8 @@ import re
 import sys
 import time
 
+from commands import getoutput
+
 CLIENT_NAME = 'CloudWatch-PutInstanceData'
 FileCache.CLIENT_NAME = CLIENT_NAME
 AWS_LIMIT_METRICS_SIZE = 20
@@ -264,6 +266,10 @@ https://github.com/osiegmar/cloudwatch-mon-scripts-python
                             choices=size_units,
                             help='Specifies units for disk space metrics.')
 
+    parser.add_argument('--poller_process_count',
+                        action='store_true',
+                        help='Report the process count of poller processes.')
+
     exclusive_group = parser.add_mutually_exclusive_group()
     exclusive_group.add_argument('--from-cron',
                                  action='store_true',
@@ -346,6 +352,9 @@ def add_disk_metrics(args, metrics):
                                disk.avail / disk_unit_div,
                                disk.mount, disk.file_system)
 
+def add_poller_process_count_metric(metrics):
+    count = int(getoutput("ps aux | grep poller.py | grep start | grep -v grep | wc -l"))
+    metrics.add_metric('PollerProcessCount', "Count",  count)
 
 def add_static_file_metrics(args, metrics):
     with open(args.from_file[0]) as f:
@@ -396,7 +405,7 @@ def validate_args(args):
         raise ValueError('Metrics to report disk space are provided but '
                          'disk path is not specified.')
 
-    if not report_mem_data and not report_disk_data and not args.from_file:
+    if not report_mem_data and not report_disk_data and not args.from_file and not args.poller_process_count:
         raise ValueError('No metrics specified for collection and '
                          'submission to CloudWatch.')
 
@@ -459,6 +468,9 @@ def main():
 
         if report_disk_data:
             add_disk_metrics(args, metrics)
+
+        if args.poller_process_count:
+            add_poller_process_count_metric(metrics)
 
         if args.verbose:
             print 'Request:\n' + str(metrics)
