@@ -270,6 +270,10 @@ https://github.com/osiegmar/cloudwatch-mon-scripts-python
                         action='store_true',
                         help='Report the process count of poller processes.')
 
+    parser.add_argument('--downed_node_count',
+                        action='store_true',
+                        help='Report the number of compute instance in the down state, that are not offline.')
+
     exclusive_group = parser.add_mutually_exclusive_group()
     exclusive_group.add_argument('--from-cron',
                                  action='store_true',
@@ -356,6 +360,10 @@ def add_poller_process_count_metric(metrics):
     count = int(getoutput("ps aux | grep poller.py | grep start | grep -v grep | wc -l"))
     metrics.add_metric('PollerProcessCount', "Count",  count)
 
+def add_downed_node_count_metric(metrics):
+    count = int(getoutput("pbsnodes | grep state | grep down | grep -v offline | wc -l"))
+    metrics.add_metric('DownedComputeNodeCount', "Count",  count)
+
 def add_static_file_metrics(args, metrics):
     with open(args.from_file[0]) as f:
         for line in f.readlines():
@@ -405,7 +413,8 @@ def validate_args(args):
         raise ValueError('Metrics to report disk space are provided but '
                          'disk path is not specified.')
 
-    if not report_mem_data and not report_disk_data and not args.from_file and not args.poller_process_count:
+    if not report_mem_data and not report_disk_data and not args.from_file and not args.poller_process_count\
+            and not args.downed_node_count:
         raise ValueError('No metrics specified for collection and '
                          'submission to CloudWatch.')
 
@@ -471,6 +480,9 @@ def main():
 
         if args.poller_process_count:
             add_poller_process_count_metric(metrics)
+
+        if args.downed_node_count:
+            add_downed_node_count_metric(metrics)
 
         if args.verbose:
             print 'Request:\n' + str(metrics)
