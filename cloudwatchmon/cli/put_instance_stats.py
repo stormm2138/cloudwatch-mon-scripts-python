@@ -357,7 +357,10 @@ def add_disk_metrics(args, metrics):
                                disk.mount, disk.file_system)
 
 def add_poller_process_count_metric(metrics):
-    count = int(getoutput("ps aux | grep poller.py | grep start | grep -v grep | wc -l"))
+    poller_process_count = int(getoutput("ps aux | grep poller.py | grep start | grep -v grep | wc -l"))
+    pbs_sched_process_count = int(getoutput("ps aux | grep pbs_sched | grep -v grep | wc -l"))
+
+    count = poller_process_count + pbs_sched_process_count
     metrics.add_metric('PollerProcessCount', "Count",  count)
 
 def add_downed_node_count_metric(metrics):
